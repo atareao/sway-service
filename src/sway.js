@@ -1,6 +1,8 @@
 #!/usr/bin/gjs --include-path=.
 'use strict';
 
+//https://github.com/altdesktop/i3ipc-python/blob/master/i3ipc/connection.py
+
 imports.searchPath.unshift('.');
 
 const Gio = imports.gi.Gio;
@@ -183,16 +185,28 @@ class Sway{
         return this.#send(this.#MsgType.GET_MARKS);
     }
 
+    /**
+     * Gets the names of all currently configured binding modes
+     * @returns A list of binding modes
+     */
     getBindingModes(){
         console.log("getBindingModes");
         return this.#send(this.#MsgType.GET_BINDING_MODES);
     }
 
+    /**
+     * Returns the last loaded config
+     * @returns A dict containing the config
+     */
     getConfig(){
         console.log("getConfig");
         return this.#send(this.#MsgType.GET_CONFIG);
     }
 
+    /**
+     * Sends a tick with the specified payload
+     * @returns The reply to the tick command
+     */
     sendTick(payload = ""){
         console.log("sendTick");
         return this.#send(this.#MsgType.SEND_TICK, payload);
