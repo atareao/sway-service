@@ -9,12 +9,17 @@ const GLib = imports.gi.GLib;
 const struct = imports.utils.struct;
 const concatArrayBuffers = imports.utils.concatArrayBuffers;
 
-const SWAYSOCK = GLib.getenv('SWAYSOCK');
-const MAGIC = "i3-ipc";
-const STRUCT_HEADER = "<6sII";
-const STRUCT_HEADER_LENGTH = 14;
-const socket_address = new Gio.UnixSocketAddress({path: SWAYSOCK});
-console.log(socket_address);
+EventType = {
+    WORKSPACE: 1,
+    OUTPUT: 1,
+    MODE: 2,
+    WINDOW: 3,
+    BARCONFIG_UPDATE: 4,
+    BINDING: 5,
+    SHUTDOWN: 6,
+    TICK: 7,
+    INPUT: 21,
+}
 
 /**
  * 
@@ -119,6 +124,11 @@ class Sway{
     runCommand(command){
         console.log("runCommand");
         return this.#send(this.#MsgType.RUN_COMMAND, command);
+    }
+
+    subscribe(events=[]){
+        console.log("subscribe");
+        return this.#send(this.#MsgType.SUBSCRIBE, payload);
     }
 
     getVersion(){
