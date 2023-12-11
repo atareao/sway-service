@@ -16,6 +16,11 @@ const STRUCT_HEADER_LENGTH = 14;
 const socket_address = new Gio.UnixSocketAddress({path: SWAYSOCK});
 console.log(socket_address);
 
+/**
+ * 
+ * @class
+ * @classdesc [TODO:class]
+ */
 class Sway{
     #SWAYSOCK = GLib.getenv('SWAYSOCK');
     #MAGIC = "i3-ipc";
@@ -38,9 +43,12 @@ class Sway{
         GET_INPUTS: 100,
         GET_SEATS: 101,
     }
-    constructor(){
 
+    constructor(){
+        this.socketAddress = new Gio.UnixSocketAddress({path: this.#SWAYSOCK});
+        console.log(this.socketAddress);
     }
+
     #pack(msg_type, payload){
         console.log(`pack: ${msg_type} - ${payload}`);
         const m = (new TextEncoder()).encode(this.#MAGIC);
@@ -48,6 +56,7 @@ class Sway{
         const s = new Uint8Array(struct("<II").pack(pb.length, msg_type));
         return concatArrayBuffers(m, s, pb);
     }
+
     #unpack_header(data){
         console.log("unpack_header");
         const slice = data.slice(0, this.#STRUCT_HEADER_LENGTH);
@@ -84,7 +93,7 @@ class Sway{
         let connection = null;
         try {
             let client = new Gio.SocketClient();
-            connection = client.connect(socket_address, null);
+            connection = client.connect(this.socketAddress, null);
             if (!connection) {
                 throw "Connection failed"
             }
@@ -103,6 +112,10 @@ class Sway{
         }
     }
 
+    /**
+     * @param {any} command
+     * @returns {[TODO:return]} [TODO:description]
+     */
     runCommand(command){
         console.log("runCommand");
         return this.#send(this.#MsgType.RUN_COMMAND, command);
@@ -180,6 +193,9 @@ class Sway{
         return this.#send(this.#MsgType.SYNC);
     }
 
+    /**
+     * @returns {[TODO:return]} [TODO:description]
+     */
     getBindingState(){
         console.log("getBindingState");
         return this.#send(this.#MsgType.GET_BINDING_STATE);
