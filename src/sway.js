@@ -8,20 +8,24 @@ imports.searchPath.unshift('.');
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 
+Gio._promisify(Gio.DataInputStream.prototype, 'read_upto_async');
+
 const struct = imports.utils.struct;
 const concatArrayBuffers = imports.utils.concatArrayBuffers;
 
-EventType = {
-    WORKSPACE: 1,
-    OUTPUT: 1,
-    MODE: 2,
-    WINDOW: 3,
-    BARCONFIG_UPDATE: 4,
-    BINDING: 5,
-    SHUTDOWN: 6,
-    TICK: 7,
-    INPUT: 21,
-}
+
+
+const EventType = {
+    WORKSPACE: (1 << 0),
+    OUTPUT: (1 << 1),
+    MODE: (1 << 2),
+    WINDOW: (1 << 3),
+    BARCONFIG_UPDATE: (1 << 4),
+    BINDING: (1 << 5),
+    SHUTDOWN: (1 << 6),
+    TICK: (1 << 7),
+    INPUT: (1 << 21),
+};
 
 /**
  * 
@@ -54,6 +58,32 @@ class Sway{
     constructor(){
         this.socketAddress = new Gio.UnixSocketAddress({path: this.#SWAYSOCK});
         console.log(this.socketAddress);
+        this.#watchSocket(new Gio.DataInputStream({
+            close_base_stream: true,
+            base_stream: new Gio.SocketClient().connect(
+                new Gio.UnixSocketAddress({path: this.#SWAYSOCK}),
+                null
+            ).get_input_stream(),
+        }));
+    }
+
+    #watchSocket(stream){
+        stream.read_line_async(0, null, (stream, result) => {
+            if(!stream) {
+                console.error("Error reading Sway socket");
+                return;
+            }
+            const line = stream.read_line_finish(result);
+            console.log(`read line: ${line}`);
+            this.#onEvent((new TextDecoder()).decode(line));
+            this.#watchSocket(stream);
+        });
+    }
+    async #onEvent(event){
+        if(!event){
+            return;
+        }
+        console.log(`event: ${event}`);
     }
 
     #pack(msg_type, payload){
@@ -107,7 +137,7 @@ class Sway{
             let output = connection.get_output_stream();
             output.write_bytes(this.#pack(msg_type, payload), null);
             const response = this.#recv(connection);
-            console.log(`Message type: ${msg_type}. Payload: ${payload}. Response: ${response}`);
+            console.debug(`Message type: ${msg_type}. Payload: ${payload}. Response: ${response}`);
             return response
         } catch (err) {
             console.error(err);
@@ -130,7 +160,22 @@ class Sway{
 
     subscribe(events=[]){
         console.log("subscribe");
-        return this.#send(this.#MsgType.SUBSCRIBE, payload);
+        const events_obj = [];
+        console.log(events);
+        if (events & EventType.WORKSPACE){
+            events_obj.push("workspace");
+        }
+        if (events & EventType.OUTPUT){
+            events_obj.push("output");
+        }
+        const payload = '["workspace", "mode"]';//JSON.stringify(events_obj);
+        console.log(`payload: ${payload}`);
+
+        const output = this.subscription.get_output_stream();
+        output.write_bytes(this.#pack(this.#MsgType.SUBSCRIBE, payload), null);
+        const response = this.#recv(this.subscription);
+        console.debug(`Payload: ${payload}. Response: ${response}`);
+        return response
     }
 
     getVersion(){
@@ -235,18 +280,19 @@ class Sway{
 //makeRequest(2, JSON.stringify(subs));
 const sway = new Sway();
 //console.log(sway.getOutputs());
-//console.log(sway.getVersion());
+console.log(sway.getVersion());
 //console.log(sway.getBarConfigList());
 //console.log(sway.getBarConfig());
 //console.log(sway.getInputs());
 //console.log(sway.getSeats());
 //console.log(sway.getWorkspaces());
 //console.log(sway.getTree());
-console.log(sway.getMarks());
-console.log(sway.getBindingModes());
-console.log(sway.getConfig());
-console.log(sway.sendTick());
-console.log(sway.sync());
+//console.log(sway.getMarks());
+//console.log(sway.getBindingModes());
+//console.log(sway.getConfig());
+//console.log(sway.sendTick());
+//console.log(sway.sync());
+//console.log(sway.getBindingState());
 console.log("========================");
-console.log(sway.getBindingState());
+//console.log(sway.subscribe([EventType.WORKSPACE]))
 console.log("========================");
